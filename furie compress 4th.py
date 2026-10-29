@@ -25,12 +25,14 @@ def decompress_data(compressed_data, original_size):
 
     half_size = original_size // 2
     restored_fft_half = np.zeros(half_size, dtype=np.complex128)
-    significant_indices = loaded_frequencies > 0
+    # 修正(2026-10-29): 保存される周波数にはDC成分(0)も含まれるため、> 0 では1件少なくなり代入件数が合わなかった
+    significant_indices = loaded_frequencies >= 0
     restored_fft_half[significant_indices] = loaded_amplitudes * np.exp(1j * loaded_phases)
 
     restored_fft = np.zeros(original_size, dtype=np.complex128)
     restored_fft[:half_size] = restored_fft_half
-    restored_fft[half_size:] = np.conj(restored_fft_half[::-1])
+    # 修正(2026-10-29): 共役対称の並びが1つずれていた。half_size の位置はナイキスト成分の枠なので、反転した複素共役は half_size+1 以降に bins 249..1 の順で入れる
+    restored_fft[half_size + 1:] = np.conj(restored_fft_half[:0:-1])
 
     restored_signal = ifft(restored_fft)
     return restored_signal.real
